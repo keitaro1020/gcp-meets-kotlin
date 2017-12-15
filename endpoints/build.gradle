@@ -1,0 +1,79 @@
+group 'endpoints'
+version '0.0.1-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.2.10'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+
+        classpath 'com.google.cloud.tools:endpoints-framework-gradle-plugin:1.0.2'
+        classpath 'com.google.cloud.tools:appengine-gradle-plugin:1.3.3'
+    }
+}
+
+repositories {
+    maven {
+        url 'https://maven-central.storage.googleapis.com'
+    }
+    jcenter()
+    mavenCentral()
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '3.5'
+}
+
+def projectId = 'PROJECT-ID'
+
+apply plugin: 'kotlin'
+apply plugin: 'war'
+apply plugin: 'com.google.cloud.tools.endpoints-framework-server'
+apply plugin: 'com.google.cloud.tools.appengine'
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+
+    compile 'com.google.endpoints:endpoints-framework:2.0.8'
+    compile 'com.google.endpoints:endpoints-management-control-appengine:1.0.5'
+    compile 'com.google.endpoints:endpoints-framework-auth:1.0.5'
+}
+
+endpointsServer {
+    hostname = "${projectId}.appspot.com"
+}
+
+appengine {  // App Engine tasks configuration
+    deploy {   // deploy configuration
+        version = findProperty("appengine.deploy.version")
+
+        def promoteProp = findProperty("appengine.deploy.promote")
+        if (promoteProp != null) {
+            promote = new Boolean(promoteProp)
+        }
+    }
+}
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+// this replaces the ${endpoints.project.id} in appengine-web.xml and web.xml
+task replaceProjectId(type: Copy) {
+    from 'src/main/webapp/WEB-INF/'
+    include '*.xml'
+    into 'build/exploded-endpoints/WEB-INF'
+    expand(endpoints:[project:[id:projectId]])
+    filteringCharset = 'UTF-8'
+}
+task replaceProjectId2(type: Copy) {
+    from 'src/main/webapp/WEB-INF/'
+    include '*.xml'
+    into 'build/exploded-backend/WEB-INF'
+    expand(endpoints:[project:[id:projectId]])
+    filteringCharset = 'UTF-8'
+}
+assemble.dependsOn replaceProjectId
+assemble.dependsOn replaceProjectId2
